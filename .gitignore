@@ -1,3 +1,21 @@
+# Compiled files and caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Old C build artifacts
 *.exe
-*.dat
 *.o
+
+# Experiment data and scripts (not requested in PDF)
+*.dat
+*.csv
+run_experiments.py
+
+# Planning and notes (not requested in PDF)
+plan.md
+
+# OS / Editor files
+.DS_Store
+.vscode/
