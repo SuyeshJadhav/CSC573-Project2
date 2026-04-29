@@ -23,6 +23,8 @@ Simple-FTP transfers a file from a **client (sender)** to a **server (receiver)*
 |---|---|
 | `client.py` | Simple-FTP sender — reads a file and transfers it using GBN |
 | `server.py` | Simple-FTP receiver — receives packets and writes to file |
+| `sr_client.py` | Extra-credit Selective Repeat sender |
+| `sr_server.py` | Extra-credit Selective Repeat receiver |
 | `common.py` | Shared constants, packet format definitions, and checksum function |
 
 ---
@@ -131,6 +133,46 @@ Get-FileHash received.dat -Algorithm MD5
 ```
 
 Both MD5 hashes must match.
+
+---
+
+## Extra Credit: Selective Repeat ARQ
+
+The extra-credit implementation is provided in separate files so the original Go-Back-N commands remain unchanged.
+
+### Start the Selective Repeat Server
+
+```bash
+python sr_server.py <port#> <output-file> <loss-probability> <N>
+```
+
+Example:
+
+```bash
+python sr_server.py 7735 sr_received_file.dat 0.05 64
+```
+
+The final `N` is the Selective Repeat receiver window size. Use the same `N` as the client during the extra-credit experiments.
+
+### Run the Selective Repeat Client
+
+```bash
+python sr_client.py <server-host> <port#> <input-file> <N> <MSS>
+```
+
+Example:
+
+```bash
+python sr_client.py 127.0.0.1 7735 test_1mb.dat 64 500
+```
+
+### Selective Repeat Behavior
+
+- **Sender:** Maintains one timer per unACKed packet. On timeout, it retransmits only that expired packet and prints `Timeout, sequence number = Y`.
+- **Receiver:** Accepts and ACKs valid packets inside the receive window, buffers out-of-order packets, writes buffered data once missing earlier packets arrive, and ACKs duplicates for packets already delivered.
+- **Loss service:** The SR server uses the same probabilistic packet drop behavior and prints `Packet loss, sequence number = X`.
+
+For the extra-credit report, repeat Tasks 1-3 using `sr_client.py` and `sr_server.py`, then compare the SR curves against the GBN curves.
 
 ---
 
