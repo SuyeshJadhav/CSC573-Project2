@@ -59,10 +59,9 @@ def main():
         if pkt_type != DATA_PACKET_TYPE:
             continue
 
-        # Verify checksum
-        # Set checksum field to 0 for calculation
-        temp_buffer = buffer[:4] + struct.pack("!H", 0) + buffer[6:]
-        calculated_checksum = calculate_checksum(temp_buffer)
+        # Verify checksum over payload bytes only (mirrors client-side computation)
+        payload = buffer[HEADER_SIZE:]
+        calculated_checksum = calculate_checksum(payload)
 
         if received_checksum != calculated_checksum:
             continue

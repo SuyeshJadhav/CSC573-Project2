@@ -48,22 +48,23 @@ def main():
     transfer_start_time = get_time_ms()
 
     while not file_eof or base < nextseqnum:
-        # Buffer bytes
-        if not file_eof and len(file_buffer) < MSS:
-            bytes_to_read = MSS - len(file_buffer)
-            data = fp.read(bytes_to_read)
-            file_buffer.extend(data)
-            if len(data) < bytes_to_read:
-                file_eof = True
+        # Send packets to fill the window (single file-read path)
+        while nextseqnum < base + N:
+            # Refill buffer if empty
+            if len(file_buffer) == 0:
+                if file_eof:
+                    break
+                data = fp.read(MSS)
+                file_buffer = bytearray(data)
+                if len(data) < MSS:
+                    file_eof = True
+                if len(file_buffer) == 0:
+                    break
 
-        # Send packets
-        while nextseqnum < base + N and (len(file_buffer) == MSS or (file_eof and len(file_buffer) > 0)):
             slot = nextseqnum % N
             
-            # Prepare packet
-            temp_hdr = struct.pack(HEADER_FORMAT, nextseqnum, 0, DATA_PACKET_TYPE)
-            pkt_without_checksum = temp_hdr + file_buffer
-            chksum = calculate_checksum(pkt_without_checksum)
+            # Prepare packet — checksum over payload bytes only
+            chksum = calculate_checksum(bytes(file_buffer))
             
             # Final packet
             pkt = struct.pack(HEADER_FORMAT, nextseqnum, chksum, DATA_PACKET_TYPE) + file_buffer
@@ -75,13 +76,7 @@ def main():
                 timer_start_ms = get_time_ms()
             
             nextseqnum += 1
-            file_buffer.clear()
-            
-            if not file_eof:
-                data = fp.read(MSS)
-                file_buffer.extend(data)
-                if len(data) < MSS:
-                    file_eof = True
+            file_buffer = bytearray()
 
         # Handle timers and ACKs
         timeout = 0
@@ -97,7 +92,7 @@ def main():
                 timer_start_ms = get_time_ms()
                 remaining_ms = TIMEOUT_MS
                 
-            timeout = remaining_ms / 1000.0
+            timeout = max(0, remaining_ms) / 1000.0
         else:
             timeout = 0.01
             
@@ -116,9 +111,8 @@ def main():
             except Exception:
                 pass
 
-    # EOF Signaling
-    eof_pkt_without_checksum = struct.pack(HEADER_FORMAT, nextseqnum, 0, EOF_PACKET_TYPE)
-    eof_chksum = calculate_checksum(eof_pkt_without_checksum)
+    # EOF Signaling — checksum over payload only (empty, as EOF carries no data)
+    eof_chksum = calculate_checksum(b"")
     eof_pkt = struct.pack(HEADER_FORMAT, nextseqnum, eof_chksum, EOF_PACKET_TYPE)
 
     eof_acked = False

@@ -13,8 +13,8 @@ def calculate_checksum(data: bytes) -> int:
     i = 0
     
     while length > 1:
-        # Simulate little-endian read of 16-bit unsigned int
-        word = data[i] | (data[i+1] << 8)
+        # Big-endian read of 16-bit unsigned int (matches UDP checksum standard)
+        word = (data[i] << 8) | data[i+1]
         sum_val += word
         i += 2
         length -= 2
